@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equinox Pixel | Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cyan: #00ffff;
+            --cyan-glow: rgba(0, 255, 255, 0.4);
+            --dark: #010406;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(0, 255, 255, 0.15);
+            --error: #ff0055;
+            --discord: #5865F2;
+        }
+
+        /* --- NEURAL PRELOADER STYLES --- */
+        #preloader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1), visibility 1s;
+        }
+        .loader-content { text-align: center; width: 300px; }
+        .hex-container {
+            width: 80px; height: 80px; margin: 0 auto 20px;
+            border: 2px solid var(--glass-border);
+            border-top: 2px solid var(--cyan);
+            border-radius: 50%;
+            animation: loaderSpin 1s linear infinite;
+            box-shadow: 0 0 20px var(--cyan-glow);
+        }
+        @keyframes loaderSpin { to { transform: rotate(360deg); } }
+        .loading-text { font-family: 'Orbitron'; font-size: 2rem; font-weight: 900; color: white; margin-bottom: 5px; text-shadow: 0 0 10px var(--cyan); }
+        .load-status { font-family: 'Orbitron'; color: var(--cyan); font-size: 0.6rem; letter-spacing: 3px; opacity: 0.8; }
+        .progress-container { width: 100%; height: 2px; background: rgba(255,255,255,0.05); margin-top: 20px; position: relative; overflow: hidden; border-radius: 10px; }
+        #progress-bar { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--cyan); box-shadow: 0 0 15px var(--cyan); transition: width 0.4s ease; }
+        .preloader-hidden { opacity: 0 !important; visibility: hidden !important; }
+
+        /* --- PROTECTION STYLES --- */
+        * { 
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        
+        input, textarea {
+            -webkit-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        /* --- 3D STYLED SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 12px; background: var(--dark); }
+        ::-webkit-scrollbar-track { 
+            background: rgba(0, 255, 255, 0.02);
+            box-shadow: inset 0 0 10px rgba(0,0,0,1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(var(--dark), var(--cyan), var(--dark));
+            border: 2px solid var(--dark);
+            border-radius: 10px;
+            box-shadow: 0 0 15px var(--cyan);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--dark);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            min-height: 200vh;
+        }
+
+        #canvas3d { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
+
+        /* --- SYSTEM NODE --- */
+        #system-node {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            background: var(--glass); border: 1px solid var(--cyan);
+            padding: 15px; border-radius: 12px; backdrop-filter: blur(15px);
+            font-family: 'Orbitron'; font-size: 0.7rem; color: var(--cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            display: flex; flex-direction: column; align-items: flex-end;
+            opacity: 0; transition: 1s ease; min-width: 180px;
+        }
+        #system-node.active { opacity: 1; }
+        .node-pulse { width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; display: inline-block; margin-right: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,255,255,0.7); } 70% { box-shadow: 0 0 0 10px rgba(0,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,255,0); } }
+
+        .sys-time { font-size: 1.1rem; font-weight: 900; margin-bottom: 5px; color: white; letter-spacing: 1px; }
+        .sys-date { font-size: 0.6rem; opacity: 0.6; margin-bottom: 10px; border-bottom: 1px solid var(--glass-border); width: 100%; text-align: right; padding-bottom: 5px; }
+
+        /* --- TOAST MESSAGE SYSTEM --- */
+        #toast-container {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; display: flex; flex-direction: column; gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(1, 4, 6, 0.95); border: 1px solid var(--cyan);
+            color: white; font-family: 'Orbitron'; font-size: 0.8rem;
+            padding: 15px 25px; border-radius: 8px; backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px var(--cyan-glow);
+            animation: toastSlide 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .toast.error { border-color: var(--error); box-shadow: 0 0 20px rgba(255, 0, 85, 0.2); }
+        
+        @keyframes toastSlide {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-fade-out { animation: toastFade 0.5s forwards !important; }
+        @keyframes toastFade { to { opacity: 0; transform: translateY(-20px); } }
+
+        /* --- COMMENT STYLES --- */
+        .comment-item {
+            padding: 20px; border-left: 2px solid var(--cyan); background: rgba(255,255,255,0.02);
+            margin-bottom: 20px; border-radius: 0 15px 15px 0;
+            display: flex; gap: 20px; align-items: flex-start;
+        }
+        .comment-avatar {
+            width: 45px; height: 45px; border-radius: 50%;
+            background: transparent; border: 2px solid var(--cyan);
+            color: var(--cyan); display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; font-weight: 900; font-size: 1.2rem;
+            box-shadow: 0 0 10px var(--cyan-glow); flex-shrink: 0;
+        }
+        .comment-body { flex-grow: 1; }
+
+        /* --- GLITCH INTRO OVERLAY --- */
+        #intro-overlay {
+            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: #000; z-index: 5000; transition: all 1.2s cubic-bezier(0.8, 0, 0.2, 1);
+            overflow: hidden;
+        }
+        #intro-overlay::before {
+            content: ""; position: absolute; inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
+            pointer-events: none; z-index: 2;
+        }
+        .glitch-wrapper { position: relative; text-align: center; }
+        
+        .name-reveal {
+            font-family: 'Orbitron'; font-size: clamp(2rem, 10vw, 5rem);
+            color: white; position: relative; display: inline-block;
+            text-transform: uppercase; letter-spacing: 10px;
+            animation: mainGlitch 3s infinite;
+        }
+        .name-reveal::before, .name-reveal::after {
+            content: "EQUINOX PIXEL"; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+        }
+        .name-reveal::before {
+            left: 2px; text-shadow: -2px 0 #ff00c1;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+        .name-reveal::after {
+            left: -2px; text-shadow: -2px 0 #00fff9;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(31px, 9999px, 94px, 0); }
+            20% { clip: rect(62px, 9999px, 42px, 0); }
+            40% { clip: rect(15px, 9999px, 81px, 0); }
+            60% { clip: rect(98px, 9999px, 12px, 0); }
+            80% { clip: rect(43px, 9999px, 55px, 0); }
+            100% { clip: rect(76px, 9999px, 23px, 0); }
+        }
+        @keyframes glitch-anim2 {
+            0% { clip: rect(65px, 9999px, 100px, 0); }
+            20% { clip: rect(12px, 9999px, 55px, 0); }
+            40% { clip: rect(82px, 9999px, 21px, 0); }
+            60% { clip: rect(44px, 9999px, 89px, 0); }
+            80% { clip: rect(15px, 9999px, 43px, 0); }
+            100% { clip: rect(91px, 9999px, 12px, 0); }
+        }
+
+        .hidden-intro { opacity: 0 !important; visibility: hidden; transform: scale(1.2); filter: blur(20px); }
+
+        /* --- MAIN SITE --- */
+        #main-site { opacity: 0; transition: 1.5s ease; visibility: hidden; padding-bottom: 100px; }
+        #main-site.visible { opacity: 1; visibility: visible; }
+        .content-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+        .hero-banner {
+            width: 100%; height: 350px;
+            background: linear-gradient(135deg, #001a1a 0%, #004444 50%, #00ffff 100%);
+            border-radius: 0 0 50px 50px;
+            position: relative; overflow: hidden;
+            display: flex; align-items: flex-end; justify-content: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-bottom: 2px solid var(--cyan);
+        }
+        .banner-glitch {
+            position: absolute; inset: 0;
+            background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+            opacity: 0.2; animation: move 20s linear infinite;
+        }
+        @keyframes move { from { background-position: 0 0; } to { background-position: 500px 500px; } }
+
+        .profile-section { margin-top: -80px; text-align: center; z-index: 10; position: relative; }
+        .pfp-main {
+            width: 160px; height: 160px; border-radius: 50%;
+            border: 4px solid var(--dark); box-shadow: 0 0 25px var(--cyan);
+            background: #111;
+        }
+
+        .glass {
+            background: var(--glass); backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 24px;
+            padding: 40px; margin-top: 40px; transition: 0.4s;
+            opacity: 0.9;
+        }
+        .glass:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,255,255,0.05); }
+
+        .works-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .work-card { 
+            height: 200px; border-radius: 15px; position: relative; overflow: hidden; 
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .work-card img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+        .work-card:hover img { transform: scale(1.1); filter: brightness(0.4); }
+        .work-info { position: absolute; bottom: -50px; left: 20px; transition: 0.4s; }
+        .work-card:hover .work-info { bottom: 20px; }
+
+        /* --- REDESIGNED DISCORD CARD (3RD SLOT) --- */
+        .discord-card-special {
+            background: linear-gradient(135deg, rgba(88, 101, 242, 0.08) 0%, rgba(1, 4, 6, 1) 100%) !important;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 1px solid rgba(88, 101, 242, 0.3) !important;
+            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            text-decoration: none;
+        }
+        .discord-card-special:hover {
+            border-color: var(--discord) !important;
+            box-shadow: 0 0 30px rgba(88, 101, 242, 0.3);
+            transform: translateY(-5px);
+        }
+        .discord-logo-wrapper { margin-bottom: 10px; transition: 0.4s; color: var(--discord); }
+        .discord-card-special:hover .discord-logo-wrapper { transform: scale(1.3) rotate(-5deg); color: #fff; filter: drop-shadow(0 0 10px var(--discord)); }
+        .join-tag { font-family: 'Orbitron'; font-size: 0.6rem; color: var(--discord); letter-spacing: 2px; margin-bottom: 5px; }
+        .join-btn-ui { margin-top: 15px; font-family: 'Orbitron'; font-size: 0.7rem; font-weight: 900; padding: 6px 15px; border: 1px solid var(--discord); color: var(--discord); border-radius: 4px; transition: 0.3s; }
+        .discord-card-special:hover .join-btn-ui { background: var(--discord); color: white; box-shadow: 0 0 15px var(--discord); }
+
+        /* --- COMMENT SYSTEM --- */
+        #initiate-comment-btn {
+            background: transparent; border: 1px solid var(--cyan); color: var(--cyan);
+            padding: 10px 20px; font-family: 'Orbitron'; cursor: pointer;
+            border-radius: 5px; margin-bottom: 20px; transition: 0.3s;
+        }
+        #initiate-comment-btn:hover { background: var(--cyan); color: var(--dark); }
+
+        #comment-form-container { display: none; }
+        #comment-form-container.active { display: block; margin-bottom: 30px; }
+
+        .comment-input, .author-input {
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--cyan);
+            border-radius: 10px; padding: 15px; color: white; outline: none; margin-bottom: 10px;
+            font-family: 'Inter', sans-serif;
+        }
+        .author-input { font-family: 'Orbitron'; color: var(--cyan); border: 1px solid var(--glass-border); }
+
+        .timestamp { display: block; font-size: 0.7rem; color: #666; margin-top: 10px; font-family: 'Orbitron'; }
+
+        .reply-item {
+            margin-left: 40px; margin-top: 10px; border-left: 2px solid #555;
+            background: rgba(255,255,255,0.01); padding: 10px 15px; border-radius: 0 10px 10px 0;
+        }
+        .actions { margin-top: 10px; display: flex; gap: 15px; font-size: 0.8rem; border-radius: 10px;}
+        .action-btn { cursor: pointer; color: var(--cyan); opacity: 0.7; transition: 0.3s; font-weight: bold; border-radius: 10px; }
+        .action-btn:hover { opacity: 1; text-shadow: 0 0 5px var(--cyan); border-radius: 10px;}
+
+        .reveal { opacity: 0; transform: translateY(30px); transition: 1s ease-out; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        /* --- FOOTER --- */
+        footer { 
+            text-align: center; margin-top: 100px; 
+            border-top: 1px solid var(--glass-border); 
+            padding: 60px 0; background: linear-gradient(to top, rgba(0,255,255,0.02), transparent);
+        }
+        .socials a { color: var(--cyan); text-decoration: none; margin: 0 15px; font-family: 'Orbitron'; font-size: 0.8rem; transition: 0.3s; }
+        .socials a:hover { text-shadow: 0 0 10px var(--cyan); }
+
+        .brand-footer {
+            margin-top: 40px;
+            font-family: 'Orbitron';
+            letter-spacing: 4px;
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: white;
+            opacity: 0.8;
+            position: relative;
+            display: inline-block;
+        }
+        .brand-footer span { color: var(--cyan); text-shadow: 0 0 15px var(--cyan); }
+        .brand-line { width: 40px; height: 2px; background: var(--cyan); margin: 10px auto; border-radius: 2px; box-shadow: 0 0 10px var(--cyan); }
+
+        /* --- AXIAL SPINNING BALL (BACK TO TOP) --- */
+        #scroll-top-wrapper {
+            position: fixed; 
+            bottom: 40px; 
+            right: 40px;
+            width: 80px; 
+            height: 80px; 
+            z-index: 5000;
+            cursor: pointer; 
+            opacity: 0; 
+            visibility: hidden;
+            
+            /* Copied Settings Styling */
+            background: var(--glass); 
+            border: 1px solid var(--cyan);
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 15px rgba(0,255,255,0.2);
+            perspective: 1000px;
+        }
+        #scroll-top-wrapper.visible { opacity: 1; visibility: visible; }
+        
+        /* Copied Settings Hover Logic */
+        #scroll-top-wrapper:hover { 
+            transform: scale(1.1) rotate(0deg); 
+            box-shadow: 0 0 25px var(--cyan-glow);
+            background: rgba(0,255,255,0.1);
+        }
+
+        .dot-sphere {
+            position: absolute; width: 100%; height: 100%;
+            transform-style: preserve-3d; display: flex; align-items: center; justify-content: center;
+            animation: blenderSpin 10s linear infinite;
+        }
+        .dot {
+            position: absolute; width: 2px; height: 2px;
+            background: var(--cyan); border-radius: 50%;
+            box-shadow: 0 0 5px var(--cyan); backface-visibility: hidden;
+        }
+        .neon-arrow {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); z-index: 5010;
+            width: 0; height: 0; border-left: 8px solid transparent;
+            border-right: 8px solid transparent; border-bottom: 14px solid #fff;
+            filter: drop-shadow(0 0 10px var(--cyan)); pointer-events: none;
+        }
+        @keyframes blenderSpin { from { transform: rotateY(0deg) rotateX(15deg); } to { transform: rotateY(360deg) rotateX(15deg); } }
+    </style>
+</head>
+<body oncontextmenu="return false;"> 
+    <div id="preloader">
+        <div class="loader-content">
+            <div class="hex-container"></div>
+            <div class="loading-text" id="load-perc">0%</div>
+            <div class="load-status">Loading System...</div>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <canvas id="canvas3d"></canvas>
+
+    <div id="scroll-top-wrapper" onclick="scrollToTop()">
+        <div class="dot-sphere" id="axial-sphere"></div>
+        <div class="neon-arrow"></div>
+    </div>
+
+    <div id="system-node">
+        <div id="clock-time" class="sys-time">00:00:00</div>
+        <div id="clock-date" class="sys-date">LOADING_DATE...</div>
+        <div><span class="node-pulse"></span>LIVE_GITHUB_EQN</div>
+        <div style="margin-top: 5px;">VISITS: <span id="visit-count">0</span></div>
+    </div>
+
+    <div id="intro-overlay">
+        <div class="glitch-wrapper">
+            <h1 class="name-reveal">EQUINOX PIXEL</h1>
+            <p style="color: var(--cyan); letter-spacing: 5px; margin-top:20px; font-family: 'Orbitron'; font-size: 0.7rem; opacity: 0.5;">[ SYSTEM_INITIALIZING_SCROLL_TO_START ]</p>
+        </div>
+    </div>
+
+    <div id="main-site">
+        <div class="hero-banner"><div class="banner-glitch"></div></div>
+
+        <div class="content-wrapper">
+            <section class="profile-section">
+                <img src="Equinox Flipmation/Flipmation.jpg" class="pfp-main" alt="Avatar">
+                <h1 style="font-family: 'Orbitron'; margin-top: 15px; color: var(--cyan);">EQUINOX_PIXEL</h1>
+                <p style="opacity: 0.7;">Animator | Equinox CEO</p>
+            </section>
+
+            <section class="glass reveal">
+                <h2 style="font-family: 'Orbitron'; color: var(--cyan);">// ABOUT "ME"</h2>
+                <p style="margin-top: 15px; line-height: 1.8;">Hello , I'm Equinox Pixel, An 7 years+ of Experienced Animator (Not Know All Things ) i'm 14 Years old , Equnox pixel is not my Actual Name , From India , My Gola is to make Better Things, And making Free Beter Things, If i can, then i will Give Free All things , i also have A Dream To make Studio, So i did, With Some Peple , And The Studios Name is "Equinox Studios" And i Am The CEO of it, To Connect With US Cheack out The Footer oF This WebSite, Thanks.</p>
+            </section>
+
+            <section class="reveal" style="margin-top: 60px;">
+                <h2 style="font-family: 'Orbitron'; color: var(--cyan);">// WORKS</h2>
+                <div class="works-grid">
+                    <div class="work-card">
+                        <img src="https://picsum.photos/400/300?sig=1" alt="W1">
+                        <div class="work-info"><h3>Animations</h3><p>Watch my Animations</p></div>
+                    </div>
+                    <div class="work-card">
+                        <img src="https://picsum.photos/400/300?sig=2" alt="W2">
+                        <div class="work-info"><h3>Assets</h3><p>Get Free Better Assets</p></div>
+                    </div>
+                    
+                    <a href="https://discord.gg/Hcb5DHvBrd" target="_blank" class="work-card discord-card-special">
+                        <div class="join-tag">EQN_HUB</div>
+                        <div class="discord-logo-wrapper">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-brand-discord"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14.983 3l.123 .006c2.014 .214 3.527 .672 4.966 1.673a1 1 0 0 1 .371 .488c1.876 5.315 2.373 9.987 1.451 12.28c-1.003 2.005 -2.606 3.553 -4.394 3.553c-.732 0 -1.693 -.968 -2.328 -2.045a21.512 21.512 0 0 0 2.103 -.493a1 1 0 1 0 -.55 -1.924c-3.32 .95 -6.13 .95 -9.45 0a1 1 0 0 0 -.55 1.924c.717 .204 1.416 .37 2.103 .494c-.635 1.075 -1.596 2.044 -2.328 2.044c-1.788 0 -3.391 -1.548 -4.428 -3.629c-.888 -2.217 -.39 -6.89 1.485 -12.204a1 1 0 0 1 .371 -.488c1.439 -1.001 2.952 -1.459 4.966 -1.673a1 1 0 0 1 .935 .435l.063 .107l.651 1.285l.137 -.016a12.97 12.97 0 0 1 2.643 0l.134 .016l.65 -1.284a1 1 0 0 1 .754 -.54l.122 -.009zm-5.983 7a2 2 0 0 0 -1.977 1.697l-.018 .154l-.005 .149l.005 .15a2 2 0 1 0 1.995 -2.15zm6 0a2 2 0 0 0 -1.977 1.697l-.018 .154l-.005 .149l.005 .15a2 2 0 1 0 1.995 -2.15z" /></svg>
+                        </div>
+                        <h3 style="font-family:'Orbitron'; color:white; margin:0;">EQUINOX STUDIOS</h3>
+                        <p style="opacity:0.6; font-size:0.8rem;">Connect With Us</p>
+                        <div class="join-btn-ui">CONNECT TO EQN STUDIO</div>
+                    </a>
+                </div>
+            </section>
+
+            <section class="glass reveal">
+                <h2 style="font-family: 'Orbitron'; color: var(--cyan); margin-bottom: 20px;">// COMMENTS</h2>
+                <button id="initiate-comment-btn" onclick="toggleCommentForm()">+ CREATE NEW COMMENTS</button>
+                <div id="comment-form-container">
+                    <input type="text" id="main-author-name" class="author-input" placeholder="YOUR NAME (AUTHOR)">
+                    <textarea id="main-comment-input" class="comment-input" placeholder="Enter message..."></textarea>
+                    <button id="send-btn" onclick="addComment()" style="background: var(--cyan); border:none; padding: 10px 25px; border-radius: 5px; font-family: 'Orbitron'; cursor: pointer; font-weight: bold; color: var(--dark);">SEND</button>
+                </div>
+                <div id="comment-display-list"></div>
+            </section>
+
+            <footer>
+                <div class="socials">
+                    <a href="https://discord.gg/Hcb5DHvBrd" target="_blank">DISCORD</a>
+                    <a href="https://youtube.com/@equinoxcoubus?si=FM6QO6xjkZ3XfAj_" target="_blank">YOUTUBE</a>
+                    <a href="https://whatsapp.com/channel/0029VaWkbByHLHQQIYu2VE3M" target="_blank">WHATSAPP</a>
+                </div>
+                <div class="brand-footer">CREATED BY <span>EQUINOX STUDIOS (CEO)</span><div class="brand-line"></div></div>
+                <p style="margin-top: 10px; font-size: 0.6rem; opacity: 0.3; font-family: 'Orbitron';">EQN. 2026 // EQN COMMUNITY HUB</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --- PRELOADER LOGIC (STAYS FOR 4 SECONDS MINIMUM) ---
+        const loadStart = Date.now();
+        window.addEventListener('load', () => {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('load-perc');
+            const preloader = document.getElementById('preloader');
+            
+            let width = 0;
+            const progressInterval = setInterval(() => {
+                // Simulate loading progress
+                width += Math.floor(Math.random() * 5) + 1;
+                if (width > 100) width = 100;
+                
+                progressBar.style.width = width + '%';
+                progressText.innerText = width + '%';
+
+                if (width === 100) {
+                    clearInterval(progressInterval);
+                    
+                    // Calculate time elapsed since script start
+                    const timeElapsed = Date.now() - loadStart;
+                    const remainingTime = Math.max(0, 4000 - timeElapsed);
+
+                    // Wait until 4 seconds total has passed
+                    setTimeout(() => {
+                        preloader.classList.add('preloader-hidden');
+                    }, remainingTime);
+                }
+            }, 50);
+        });
+
+        function sanitize(text) { const temp = document.createElement('div'); temp.textContent = text; return temp.innerHTML; }
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('toast-fade-out'); setTimeout(() => toast.remove(), 500); }, 3000);
+        }
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#canvas3d'), antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        const mesh = new THREE.Points(new THREE.TorusKnotGeometry(12, 3, 200, 32), new THREE.PointsMaterial({ color: 0x00ffff, size: 0.05, transparent: true, opacity: 0.6 }));
+        scene.add(mesh);
+        const starGeo = new THREE.BufferGeometry();
+        const starCoords = [];
+        for(let i=0; i<1500; i++) { starCoords.push(Math.random()*600-300, Math.random()*600-300, Math.random()*600-300); }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true, opacity: 0.5 }));
+        scene.add(stars);
+        camera.position.z = 45;
+
+        let active = false;
+        function activate() {
+            if(active) return; active = true;
+            document.getElementById('intro-overlay').classList.add('hidden-intro');
+            document.getElementById('main-site').classList.add('visible');
+            document.getElementById('system-node').classList.add('active');
+            const obs = new IntersectionObserver((entries) => {
+                entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('active'); });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+        }
+
+        window.addEventListener('wheel', activate);
+        window.addEventListener('scroll', () => { 
+            if(window.scrollY > 10) activate();
+            const st = document.getElementById('scroll-top-wrapper');
+            if (window.scrollY > 400) st.classList.add('visible'); else st.classList.remove('visible');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            mesh.rotation.y += 0.003;
+            stars.rotation.y -= 0.0005;
+            if(active) {
+                let s = window.scrollY * 0.005;
+                mesh.position.z = s * 8;
+                stars.position.z = (s * 40) % 300;
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        function updateNode() {
+            const now = new Date();
+            document.getElementById('clock-time').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('clock-date').innerText = now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+            let count = localStorage.getItem('site_visits') || 1240;
+            if (!sessionStorage.getItem('session_active')) {
+                count = parseInt(count) + 1;
+                localStorage.setItem('site_visits', count);
+                sessionStorage.setItem('session_active', 'true');
+            }
+            document.getElementById('visit-count').innerText = count.toString().padStart(5, '0');
+        }
+        setInterval(updateNode, 1000); updateNode();
+
+        function initBall() {
+            const sphere = document.getElementById('axial-sphere');
+            for (let i = 0; i < 60; i++) {
+                const phi = Math.acos(-1 + (2 * i) / 60);
+                const theta = Math.sqrt(60 * Math.PI) * phi;
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.style.transform = `translate3d(${35 * Math.cos(theta) * Math.sin(phi)}px, ${35 * Math.sin(theta) * Math.sin(phi)}px, ${35 * Math.cos(phi)}px)`;
+                sphere.appendChild(dot);
+            }
+        }
+        initBall();
+
+        let comments = JSON.parse(localStorage.getItem('trans_v5')) || [];
+        function renderComments() {
+            const list = document.getElementById('comment-display-list');
+            list.innerHTML = '';
+            comments.forEach((c, i) => {
+                const item = document.createElement('div');
+                item.className = 'comment-item';
+                const initial = c.user.charAt(0).toUpperCase() || "?";
+                item.innerHTML = `
+                <div class="comment-avatar">${initial}</div>
+                <div class="comment-body">
+                    <strong style="color: var(--cyan); font-family: 'Orbitron';">${c.user}</strong>
+                    <p style="margin-top: 5px;">${c.text}</p>
+                    <span class="timestamp">${c.date}</span>
+                    <div class="actions"><span class="action-btn" onclick="like(${i})">▲ Like (${c.likes})</span><span class="action-btn" onclick="toggleRep(${i})">Reply</span></div>
+                    <div id="rep-box-${i}" style="display:none; margin-top:10px;">
+                        <input type="text" id="ra-${i}" class="author-input" style="width:150px" placeholder="NAME">
+                        <input type="text" id="rt-${i}" class="author-input" style="width:200px" placeholder="REPLY...">
+                        <button onclick="addRep(${i})" style="background:var(--cyan); border:none; border-radius:10px; padding:5px 10px; cursor:pointer; font-family:'Orbitron'; font-size:0.7rem; font-weight:bold;">SEND</button>
+                    </div>
+                    <div class="reply-list">${c.replies.map(r => `<div class="reply-item"><strong>${r.author}</strong><p>${r.text}</p><span class="timestamp">${r.date}</span></div>`).join('')}</div>
+                </div>`;
+                list.appendChild(item);
+            });
+            localStorage.setItem('trans_v5', JSON.stringify(comments));
+        }
+
+        function toggleCommentForm() { document.getElementById('comment-form-container').classList.toggle('active'); }
+        function addComment() {
+            const author = sanitize(document.getElementById('main-author-name').value);
+            const text = sanitize(document.getElementById('main-comment-input').value);
+            if(author && text) {
+                comments.unshift({ user: author, text, likes: 0, replies: [], date: new Date().toLocaleString() });
+                renderComments(); toggleCommentForm();
+                document.getElementById('main-author-name').value = '';
+                document.getElementById('main-comment-input').value = '';
+                showToast("Comment added Sucsessfully.");
+            }
+        }
+        function toggleRep(i) { const b = document.getElementById(`rep-box-${i}`); b.style.display = b.style.display === 'none' ? 'block' : 'none'; }
+        function addRep(i) {
+            const a = sanitize(document.getElementById(`ra-${i}`).value);
+            const t = sanitize(document.getElementById(`rt-${i}`).value);
+            if(a && t) {
+                comments[i].replies.push({ author: a, text: t, date: new Date().toLocaleString() });
+                renderComments(); showToast("Reply linked.");
+            }
+        }
+        function like(i) { comments[i].likes++; renderComments(); }
+        renderComments();
+
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && (e.key === 'u' || e.key === 's'))) {
+                e.preventDefault();
+                showToast("ENCRYPTION ACTIVE", "error");
+            }
+        });
+    </script>
+</body>
+</html>```
